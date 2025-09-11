@@ -3,6 +3,7 @@ require('colors');
 
 const orderCreatedHandler = require('../handlers/orderCreatedHandler');
 const orderStatusUpdatedHandler = require('../handlers/orderStatusUpdatedHandler');
+const inventoryCriticalHandler = require('../handlers/inventoryCriticalHandler');
 
 let connection = null;
 let channel = null;
@@ -11,12 +12,14 @@ const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:password@localhos
 
 // Exchange and queue configurations
 const EXCHANGES = {
-  ORDERS: 'orders.events'
+  ORDERS: 'orders.events',
+  INVENTORY_CRITICAL: 'inventory.critical'
 };
 
 const QUEUES = {
   ORDER_CREATED: 'order.created',
-  ORDER_STATUS_UPDATED: 'order.status.updated'
+  ORDER_STATUS_UPDATED: 'order.status.updated',
+  INVENTORY_CRITICAL: 'inventory.critical.notifications'
 };
 
 const ROUTING_KEYS = {
@@ -56,6 +59,10 @@ const connectRabbitMQ = async () => {
       durable: true
     });
 
+    await channel.assertExchange(EXCHANGES.INVENTORY_CRITICAL, 'fanout', {
+      durable: true
+    });
+
     // Declare queues for this service
     await channel.assertQueue(QUEUES.ORDER_CREATED, {
       durable: true,
@@ -73,6 +80,14 @@ const connectRabbitMQ = async () => {
       }
     });
 
+    await channel.assertQueue(QUEUES.INVENTORY_CRITICAL, {
+      durable: true,
+      arguments: {
+        'x-message-ttl': 3600000, // 1 hour TTL for inventory alerts
+        'x-max-retries': 3
+      }
+    });
+
     // Bind queues to exchanges
     await channel.bindQueue(
       QUEUES.ORDER_CREATED,
@@ -84,6 +99,13 @@ const connectRabbitMQ = async () => {
       QUEUES.ORDER_STATUS_UPDATED,
       EXCHANGES.ORDERS,
       ROUTING_KEYS.ORDER_STATUS_UPDATED
+    );
+
+    // Bind inventory critical queue to fanout exchange (no routing key needed)
+    await channel.bindQueue(
+      QUEUES.INVENTORY_CRITICAL,
+      EXCHANGES.INVENTORY_CRITICAL,
+      '' // Empty routing key for fanout exchange
     );
 
     console.log('✅ RabbitMQ connection and setup completed'.green);
@@ -156,6 +178,35 @@ const startEventListeners = async () => {
           
         } catch (error) {
           console.error('❌ Error processing OrderStatusUpdated event:'.red, error);
+          
+          if (shouldRetry(error)) {
+            channel.nack(message, false, true);
+            console.log('🔄 Message requeued for retry'.yellow);
+          } else {
+            channel.nack(message, false, false);
+            console.log('❌ Message rejected permanently'.red);
+          }
+        }
+      }
+    }, {
+      noAck: false
+    });
+
+    // Set up Inventory Critical event listener
+    await channel.consume(QUEUES.INVENTORY_CRITICAL, async (message) => {
+      if (message) {
+        try {
+          console.log('📥 Received InventoryCritical event'.cyan);
+          
+          // Process the event
+          await inventoryCriticalHandler.handle(message);
+          
+          // Acknowledge the message
+          channel.ack(message);
+          console.log('✅ InventoryCritical event processed'.green);
+          
+        } catch (error) {
+          console.error('❌ Error processing InventoryCritical event:'.red, error);
           
           if (shouldRetry(error)) {
             channel.nack(message, false, true);

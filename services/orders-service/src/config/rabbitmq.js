@@ -7,12 +7,14 @@ const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://admin:password@localhos
 
 // Exchange and queue configurations
 const EXCHANGES = {
-  ORDERS: 'orders.events'
+  ORDERS: 'orders.events',
+  INVENTORY_CRITICAL: 'inventory.critical'
 };
 
 const QUEUES = {
   ORDER_CREATED: 'order.created',
-  ORDER_STATUS_UPDATED: 'order.status.updated'
+  ORDER_STATUS_UPDATED: 'order.status.updated',
+  INVENTORY_CRITICAL: 'inventory.critical.orders'
 };
 
 const ROUTING_KEYS = {
@@ -49,6 +51,10 @@ const connectRabbitMQ = async () => {
       durable: true
     });
 
+    await channel.assertExchange(EXCHANGES.INVENTORY_CRITICAL, 'fanout', {
+      durable: true
+    });
+
     // Declare queues (for completeness, though consumers will typically do this)
     await channel.assertQueue(QUEUES.ORDER_CREATED, {
       durable: true
@@ -56,6 +62,14 @@ const connectRabbitMQ = async () => {
 
     await channel.assertQueue(QUEUES.ORDER_STATUS_UPDATED, {
       durable: true
+    });
+
+    await channel.assertQueue(QUEUES.INVENTORY_CRITICAL, {
+      durable: true,
+      arguments: {
+        'x-message-ttl': 3600000,
+        'x-dead-letter-exchange': 'ecommerce.dlx'
+      }
     });
 
     // Bind queues to exchanges
@@ -69,6 +83,13 @@ const connectRabbitMQ = async () => {
       QUEUES.ORDER_STATUS_UPDATED,
       EXCHANGES.ORDERS,
       ROUTING_KEYS.ORDER_STATUS_UPDATED
+    );
+
+    // Bind inventory critical queue to fanout exchange
+    await channel.bindQueue(
+      QUEUES.INVENTORY_CRITICAL,
+      EXCHANGES.INVENTORY_CRITICAL,
+      '' // Empty routing key for fanout exchange
     );
 
     console.log('RabbitMQ connection and setup completed');

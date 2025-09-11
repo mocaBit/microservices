@@ -1,6 +1,7 @@
 const express = require('express');
 const Product = require('../models/Product');
 const cacheService = require('../services/cacheService');
+const inventoryPublisher = require('../services/inventoryPublisher');
 const Joi = require('joi');
 
 const router = express.Router();
@@ -265,6 +266,56 @@ router.get('/health/cache', async (req, res) => {
       cache: 'error',
       error: error.message,
       timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// PUT /api/products/:id/stock - Update product stock (for testing inventory alerts)
+router.put('/:id/stock', async (req, res) => {
+  try {
+    const { error: paramError, value: paramValue } = productIdSchema.validate(req.params);
+    if (paramError) {
+      return res.status(400).json({
+        error: 'Invalid product ID',
+        details: paramError.details.map(detail => detail.message)
+      });
+    }
+
+    const stockSchema = Joi.object({
+      stock_quantity: Joi.number().integer().min(0).required()
+    });
+
+    const { error: bodyError, value: bodyValue } = stockSchema.validate(req.body);
+    if (bodyError) {
+      return res.status(400).json({
+        error: 'Invalid stock data',
+        details: bodyError.details.map(detail => detail.message)
+      });
+    }
+
+    const { id } = paramValue;
+    const { stock_quantity } = bodyValue;
+
+    const updatedProduct = await Product.updateStock(id, stock_quantity);
+    
+    if (!updatedProduct) {
+      return res.status(404).json({
+        error: 'Product not found'
+      });
+    }
+
+    await cacheService.deleteProduct(id);
+    await cacheService.clearProductsCache();
+
+    res.status(200).json({
+      message: 'Stock updated successfully',
+      product: updatedProduct
+    });
+
+  } catch (error) {
+    console.error('Error updating stock:', error);
+    res.status(500).json({
+      error: 'Internal server error while updating stock'
     });
   }
 });

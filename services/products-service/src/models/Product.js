@@ -158,6 +158,8 @@ class Product {
   }
 
   static async updateStock(id, newStock) {
+    const inventoryPublisher = require('../services/inventoryPublisher');
+    
     const query = `
       UPDATE products 
       SET stock_quantity = $1, 
@@ -172,7 +174,13 @@ class Product {
 
     try {
       const result = await pool.query(query, values);
-      return result.rows[0] || null;
+      const updatedProduct = result.rows[0];
+      
+      if (updatedProduct) {
+        await inventoryPublisher.checkInventoryLevel(id, newStock);
+      }
+      
+      return updatedProduct;
     } catch (error) {
       console.error('Error updating stock:', error);
       throw error;

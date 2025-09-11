@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 
 const orderRoutes = require('./routes/orders');
 const { connectRabbitMQ } = require('./config/rabbitmq');
+const inventoryListener = require('./services/inventoryListener');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -57,6 +58,10 @@ const startServer = async () => {
   try {
     await connectRabbitMQ();
     console.log('RabbitMQ connected successfully');
+    
+    // Start inventory critical listener
+    await inventoryListener.start();
+    console.log('Inventory critical listener started');
     
     app.listen(PORT, () => {
       console.log(`Orders service running on port ${PORT}`);
