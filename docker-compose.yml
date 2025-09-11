@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-network
+
+  # Redis para caché
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - ecommerce-network
+
+  # RabbitMQ como Event Bus
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    networks:
+      - ecommerce-network
+
+  # Servicio de usuarios
+  users-service:
+    build: ./services/users-service
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: postgres://postgres:password@postgres:5432/ecommerce
+      JWT_SECRET: your-secret-key
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - ecommerce-network
+
+  # Servicio de productos
+  products-service:
+    build: ./services/products-service
+    ports:
+      - "3002:3000"
+    environment:
+      DATABASE_URL: postgres://postgres:password@postgres:5432/ecommerce
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - ecommerce-network
+
+  # Servicio de pedidos
+  orders-service:
+    build: ./services/orders-service
+    ports:
+      - "3003:3000"
+    environment:
+      DATABASE_URL: postgres://postgres:password@postgres:5432/ecommerce
+      USERS_SERVICE_URL: http://users-service:3000
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+    depends_on:
+      - postgres
+      - rabbitmq
+      - users-service
+    networks:
+      - ecommerce-network
+
+  # Servicio de notificaciones
+  notifications-service:
+    build: ./services/notifications-service
+    ports:
+      - "3004:3000"
+    environment:
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+    depends_on:
+      - rabbitmq
+    networks:
+      - ecommerce-network
+
+volumes:
+  postgres_data:
+
+networks:
+  ecommerce-network:
+    driver: bridge
