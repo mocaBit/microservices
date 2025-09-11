@@ -47,8 +47,18 @@ services:
     ports:
       - "5672:5672"    # AMQP
       - "15672:15672"  # Management UI
+    volumes:
+      - ./rabbitmq/config/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/config/definitions.json:/etc/rabbitmq/definitions.json
+      - ./rabbitmq/config/enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - ecommerce-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # Servicio de usuarios
   users-service:
@@ -110,6 +120,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:
 
 networks:
   ecommerce-network:
