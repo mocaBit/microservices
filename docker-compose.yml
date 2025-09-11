@@ -26,8 +26,17 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - ./database/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis_data:/data
+    command: redis-server /usr/local/etc/redis/redis.conf
     networks:
       - ecommerce-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # RabbitMQ como Event Bus
   rabbitmq:
@@ -100,6 +109,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   ecommerce-network:
