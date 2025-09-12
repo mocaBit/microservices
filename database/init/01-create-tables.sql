@@ -16,7 +16,8 @@ CREATE TABLE products (
     price DECIMAL(10, 2) NOT NULL,
     category VARCHAR(100) NOT NULL,
     image_url VARCHAR(500),
-    stock INTEGER DEFAULT 0,
+    stock_quantity INTEGER DEFAULT 0,
+    available BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -47,3 +48,5 @@ CREATE INDEX idx_orders_user_id ON orders(user_id);
 CREATE INDEX idx_orders_created_at ON orders(created_at);
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_products_category ON products(category);
+CREATE INDEX idx_products_stock_quantity ON products(stock_quantity);
+CREATE INDEX idx_products_available ON products(available);
