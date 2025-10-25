@@ -1,12 +1,16 @@
 require('colors');
 
+// Import SSE function (will be set by route initialization)
+let sendSSENotification = null;
+
 class NotificationService {
   constructor() {
     this.channels = {
       console: true,
       email: process.env.EMAIL_ENABLED === 'true',
       sms: process.env.SMS_ENABLED === 'true',
-      push: process.env.PUSH_ENABLED === 'true'
+      push: process.env.PUSH_ENABLED === 'true',
+      sse: process.env.SSE_ENABLED !== 'false'  // Enable SSE by default
     };
     
     this.templates = {
@@ -43,7 +47,8 @@ class NotificationService {
         console: { sent: 0, failed: 0 },
         email: { sent: 0, failed: 0 },
         sms: { sent: 0, failed: 0 },
-        push: { sent: 0, failed: 0 }
+        push: { sent: 0, failed: 0 },
+        sse: { sent: 0, failed: 0 }
       }
     };
   }
@@ -199,6 +204,8 @@ ${statusMessages[currentStatus]}
         return this.sendSMSNotification(template, message, options);
       case 'push':
         return this.sendPushNotification(template, message, options);
+      case 'sse':
+        return this.sendSSENotification(template, message, options);
       default:
         console.error(`❌ Unknown notification channel: ${channel}`.red);
         return false;
@@ -277,6 +284,40 @@ ${statusMessages[currentStatus]}
     }
   }
 
+  async sendSSENotification(template, message, options) {
+    try {
+      if (!sendSSENotification) {
+        console.log('⚠️  [SSE] SSE function not initialized, skipping SSE notification'.yellow);
+        return false;
+      }
+
+      console.log(`📡 [SSE] Sending to user ${options.userId}: ${template.title}`.blue);
+
+      const ssePayload = {
+        template: template,
+        message: message,
+        metadata: {
+          userId: options.userId,
+          timestamp: new Date().toISOString(),
+          channel: 'sse'
+        }
+      };
+
+      const result = sendSSENotification(options.userId, ssePayload);
+
+      if (result.sent > 0) {
+        console.log(`✅ [SSE] Sent to ${result.sent} client(s) for user ${options.userId}`.green);
+        return true;
+      } else {
+        console.log(`⚠️  [SSE] No active connections found for user ${options.userId}`.yellow);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ SSE notification failed:'.red, error);
+      return false;
+    }
+  }
+
   getTemplateKeyForStatus(status) {
     const statusMap = {
       'confirmed': 'orderConfirmed',
@@ -307,7 +348,8 @@ ${statusMessages[currentStatus]}
         console: { sent: 0, failed: 0 },
         email: { sent: 0, failed: 0 },
         sms: { sent: 0, failed: 0 },
-        push: { sent: 0, failed: 0 }
+        push: { sent: 0, failed: 0 },
+        sse: { sent: 0, failed: 0 }
       }
     };
   }
@@ -319,6 +361,12 @@ ${statusMessages[currentStatus]}
     } else {
       console.error(`❌ Unknown channel: ${channel}`.red);
     }
+  }
+
+  // Method to initialize SSE function from routes
+  initializeSSE(sseFunction) {
+    sendSSENotification = sseFunction;
+    console.log('📡 SSE notification system initialized'.green);
   }
 }
 
