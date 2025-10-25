@@ -120,6 +120,55 @@ Once all services are running, they will be available at:
 
 - **Redis**: `localhost:6379`
 
+### Database and Message Broker Access
+
+#### PostgreSQL Database Connection
+
+You can connect to the PostgreSQL database using any PostgreSQL client with these parameters:
+
+- **Host**: `localhost`
+- **Port**: `5432`
+- **Database**: `ecommerce`
+- **Username**: `postgres`
+- **Password**: `password`
+
+Connection string format:
+```
+postgresql://postgres:password@localhost:5432/ecommerce
+```
+
+Example using `psql` command line:
+```bash
+psql -h localhost -p 5432 -U postgres -d ecommerce
+```
+
+#### RabbitMQ Management UI
+
+Access the RabbitMQ Management Interface to monitor queues, exchanges, and messages:
+
+- **URL**: http://localhost:15672
+- **Username**: `admin`
+- **Password**: `password`
+
+From the management UI you can:
+- View and manage queues
+- Monitor message flow
+- Check exchange bindings
+- View connection status
+- Debug message routing
+
+#### Redis Connection
+
+Connect to Redis using redis-cli or any Redis client:
+```bash
+redis-cli -h localhost -p 6379
+```
+
+Or use the included script:
+```bash
+./scripts/redis-cli.sh
+```
+
 ### Validate All Services Are Working
 
 Run the validation script:
