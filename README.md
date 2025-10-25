@@ -33,7 +33,7 @@ A basic system where a user places an order, it gets processed and notified, wit
 ## Open Source Tools to Use
 
 - **Node.js + Express** → build the microservices
-- **Docker Compose** → run all services together
+- **Docker Compose / Podman Compose** → run all services together
 - **Redis** → cache in products-service
 - **RabbitMQ** → Event Bus to communicate events
 - **PostgreSQL** → persistence for users, products and orders
@@ -51,8 +51,8 @@ A basic system where a user places an order, it gets processed and notified, wit
 
 ### Prerequisites
 
-- [Docker](https://www.docker.com/get-started) installed
-- [Docker Compose](https://docs.docker.com/compose/install/) installed
+- [Docker](https://www.docker.com/get-started) or [Podman](https://podman.io/getting-started/installation) installed
+- [Docker Compose](https://docs.docker.com/compose/install/) installed (or use Podman Compose)
 
 ### Start All Services
 
@@ -64,17 +64,29 @@ cd e-commerce
 
 2. Build and start all services with Docker Compose:
 ```bash
+# Using Docker Compose
 docker-compose up --build
+
+# Using Podman Compose
+podman compose up --build
 ```
 
 Or to run in the background:
 ```bash
+# Using Docker Compose
 docker-compose up -d --build
+
+# Using Podman Compose
+podman compose up -d --build
 ```
 
 3. Wait for all services to be ready. You can check the status with:
 ```bash
+# Using Docker Compose
 docker-compose ps
+
+# Using Podman Compose
+podman compose ps
 ```
 
 ### Available Services
@@ -126,30 +138,53 @@ This script will automatically verify:
 
 View logs for all services:
 ```bash
+# Using Docker Compose
 docker-compose logs -f
+
+# Using Podman Compose
+podman compose logs -f
 ```
 
 View logs for a specific service:
 ```bash
+# Using Docker Compose
 docker-compose logs -f users-service
 docker-compose logs -f products-service
 docker-compose logs -f orders-service
 docker-compose logs -f notifications-service
+
+# Using Podman Compose
+podman compose logs -f users-service
+podman compose logs -f products-service
+podman compose logs -f orders-service
+podman compose logs -f notifications-service
 ```
 
 Stop all services:
 ```bash
+# Using Docker Compose
 docker-compose down
+
+# Using Podman Compose
+podman compose down
 ```
 
 Stop and remove volumes (cleans databases):
 ```bash
+# Using Docker Compose
 docker-compose down -v
+
+# Using Podman Compose
+podman compose down -v
 ```
 
 Rebuild a specific service:
 ```bash
+# Using Docker Compose
 docker-compose up -d --build users-service
+
+# Using Podman Compose
+podman compose up -d --build users-service
 ```
 
 ### Test the Complete Flow
@@ -178,16 +213,29 @@ lsof -i :3001,3002,3003,3004,5432,6379,5672,15672
 
 2. Clean up previous containers and volumes:
 ```bash
+# Using Docker Compose
 docker-compose down -v
 docker system prune -a
+
+# Using Podman Compose
+podman compose down -v
+podman system prune -a
 ```
 
 3. Check error logs:
 ```bash
+# Using Docker Compose
 docker-compose logs
+
+# Using Podman Compose
+podman compose logs
 ```
 
 4. Review healthcheck status:
 ```bash
+# Using Docker Compose
 docker-compose ps
+
+# Using Podman Compose
+podman compose ps
 ```
