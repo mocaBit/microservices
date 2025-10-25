@@ -1,14 +1,15 @@
 #!/bin/bash
 
-# Script para validar que todos los servicios están corriendo y funcionando correctamente
-# Colores para output
+# Script to validate that all services are running and working correctly
+# Compatible with Docker Compose and Podman Compose
+# Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Función para imprimir mensajes
+# Function to print messages
 print_header() {
     echo -e "\n${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
@@ -31,19 +32,32 @@ print_info() {
     echo -e "${BLUE}ℹ $1${NC}"
 }
 
-# Contador de errores
+# Error counter
 ERRORS=0
 
-# Validar que Docker Compose está instalado
-print_header "Verificando Docker Compose"
-if ! command -v docker-compose &> /dev/null; then
-    print_error "Docker Compose no está instalado"
+# Detect whether to use Docker Compose or Podman Compose
+COMPOSE_CMD=""
+if command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker-compose"
+elif command -v podman-compose &> /dev/null; then
+    COMPOSE_CMD="podman-compose"
+elif command -v podman &> /dev/null && podman compose version &> /dev/null; then
+    COMPOSE_CMD="podman compose"
+else
+    print_error "Neither Docker Compose nor Podman Compose are installed"
+    print_info "Install one of the following:"
+    echo "  - Docker Compose: https://docs.docker.com/compose/install/"
+    echo "  - Podman Compose: pip install podman-compose"
+    echo "  - Podman with compose plugin: https://podman.io/getting-started/installation"
     exit 1
 fi
-print_success "Docker Compose está instalado"
 
-# Verificar que los contenedores están corriendo
-print_header "Verificando contenedores Docker"
+# Validate that Docker Compose or Podman Compose is installed
+print_header "Checking container orchestration tool"
+print_success "Using: $COMPOSE_CMD"
+
+# Check that containers are running
+print_header "Checking Docker containers"
 
 CONTAINERS=(
     "postgres"
@@ -56,173 +70,186 @@ CONTAINERS=(
 )
 
 for container in "${CONTAINERS[@]}"; do
-    # Buscar el contenedor por nombre (puede tener prefijo del directorio)
-    CONTAINER_STATUS=$(docker-compose ps -q $container 2>/dev/null | xargs docker inspect -f '{{.State.Status}}' 2>/dev/null)
+    # Search for container by name (may have directory prefix)
+    CONTAINER_STATUS=$($COMPOSE_CMD ps -q $container 2>/dev/null | xargs docker inspect -f '{{.State.Status}}' 2>/dev/null)
+
+    # If docker inspect fails, try with podman inspect
+    if [ -z "$CONTAINER_STATUS" ] && command -v podman &> /dev/null; then
+        CONTAINER_STATUS=$($COMPOSE_CMD ps -q $container 2>/dev/null | xargs podman inspect -f '{{.State.Status}}' 2>/dev/null)
+    fi
 
     if [ "$CONTAINER_STATUS" = "running" ]; then
-        print_success "Contenedor $container está corriendo"
+        print_success "Container $container is running"
     else
-        print_error "Contenedor $container NO está corriendo (Estado: ${CONTAINER_STATUS:-no encontrado})"
+        print_error "Container $container is NOT running (Status: ${CONTAINER_STATUS:-not found})"
         ((ERRORS++))
     fi
 done
 
-# Verificar healthchecks de infraestructura
-print_header "Verificando health checks de infraestructura"
+# Check infrastructure health checks
+print_header "Checking infrastructure health checks"
 
 # PostgreSQL
-print_info "Verificando PostgreSQL..."
-if docker-compose exec -T postgres pg_isready -U postgres -d ecommerce &> /dev/null; then
-    print_success "PostgreSQL está listo y aceptando conexiones"
+print_info "Checking PostgreSQL..."
+if $COMPOSE_CMD exec -T postgres pg_isready -U postgres -d ecommerce &> /dev/null; then
+    print_success "PostgreSQL is ready and accepting connections"
 else
-    print_error "PostgreSQL no está respondiendo"
+    print_error "PostgreSQL is not responding"
     ((ERRORS++))
 fi
 
 # Redis
-print_info "Verificando Redis..."
-if docker-compose exec -T redis redis-cli ping &> /dev/null; then
-    print_success "Redis está respondiendo"
+print_info "Checking Redis..."
+if $COMPOSE_CMD exec -T redis redis-cli ping &> /dev/null; then
+    print_success "Redis is responding"
 else
-    print_error "Redis no está respondiendo"
+    print_error "Redis is not responding"
     ((ERRORS++))
 fi
 
 # RabbitMQ
-print_info "Verificando RabbitMQ..."
-if docker-compose exec -T rabbitmq rabbitmq-diagnostics ping &> /dev/null; then
-    print_success "RabbitMQ está respondiendo"
+print_info "Checking RabbitMQ..."
+if $COMPOSE_CMD exec -T rabbitmq rabbitmq-diagnostics ping &> /dev/null; then
+    print_success "RabbitMQ is responding"
 else
-    print_error "RabbitMQ no está respondiendo"
+    print_error "RabbitMQ is not responding"
     ((ERRORS++))
 fi
 
-# Verificar servicios HTTP
-print_header "Verificando endpoints HTTP de servicios"
+# Check HTTP services
+print_header "Checking HTTP service endpoints"
 
-# Esperar un poco para que los servicios inicien
+# Wait a bit for services to start
 sleep 2
 
 # Users Service
-print_info "Verificando Users Service..."
+print_info "Checking Users Service..."
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health 2>/dev/null || echo "000")
 if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "404" ]; then
-    print_success "Users Service está respondiendo en puerto 3001"
+    print_success "Users Service is responding on port 3001"
 else
-    print_warning "Users Service puede no estar listo (HTTP $RESPONSE) - probando endpoint alternativo..."
-    # Intentar con otro endpoint
+    print_warning "Users Service may not be ready (HTTP $RESPONSE) - trying alternate endpoint..."
+    # Try with another endpoint
     RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/ 2>/dev/null || echo "000")
     if [ "$RESPONSE" != "000" ]; then
-        print_success "Users Service está respondiendo"
+        print_success "Users Service is responding"
     else
-        print_error "Users Service no está respondiendo"
+        print_error "Users Service is not responding"
         ((ERRORS++))
     fi
 fi
 
 # Products Service
-print_info "Verificando Products Service..."
+print_info "Checking Products Service..."
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3002/products 2>/dev/null || echo "000")
 if [ "$RESPONSE" = "200" ]; then
-    print_success "Products Service está respondiendo en puerto 3002"
-    # Verificar que tiene productos
+    print_success "Products Service is responding on port 3002"
+    # Check that it has products
     PRODUCTS=$(curl -s http://localhost:3002/products 2>/dev/null)
     if [ ! -z "$PRODUCTS" ]; then
-        print_success "Products Service tiene datos disponibles"
+        print_success "Products Service has available data"
     fi
 elif [ "$RESPONSE" = "404" ]; then
-    print_warning "Products Service responde pero endpoint /products retorna 404"
+    print_warning "Products Service responds but /products endpoint returns 404"
 else
-    print_error "Products Service no está respondiendo correctamente (HTTP $RESPONSE)"
+    print_error "Products Service is not responding correctly (HTTP $RESPONSE)"
     ((ERRORS++))
 fi
 
 # Orders Service
-print_info "Verificando Orders Service..."
+print_info "Checking Orders Service..."
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3003/health 2>/dev/null || echo "000")
 if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "404" ]; then
-    print_success "Orders Service está respondiendo en puerto 3003"
+    print_success "Orders Service is responding on port 3003"
 else
-    print_warning "Orders Service puede no estar listo (HTTP $RESPONSE) - probando endpoint alternativo..."
+    print_warning "Orders Service may not be ready (HTTP $RESPONSE) - trying alternate endpoint..."
     RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3003/ 2>/dev/null || echo "000")
     if [ "$RESPONSE" != "000" ]; then
-        print_success "Orders Service está respondiendo"
+        print_success "Orders Service is responding"
     else
-        print_error "Orders Service no está respondiendo"
+        print_error "Orders Service is not responding"
         ((ERRORS++))
     fi
 fi
 
 # Notifications Service
-print_info "Verificando Notifications Service..."
+print_info "Checking Notifications Service..."
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3004/health 2>/dev/null || echo "000")
 if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "404" ]; then
-    print_success "Notifications Service está respondiendo en puerto 3004"
+    print_success "Notifications Service is responding on port 3004"
 else
-    print_warning "Notifications Service puede no estar listo (HTTP $RESPONSE) - probando endpoint alternativo..."
+    print_warning "Notifications Service may not be ready (HTTP $RESPONSE) - trying alternate endpoint..."
     RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3004/ 2>/dev/null || echo "000")
     if [ "$RESPONSE" != "000" ]; then
-        print_success "Notifications Service está respondiendo"
+        print_success "Notifications Service is responding"
     else
-        print_error "Notifications Service no está respondiendo"
+        print_error "Notifications Service is not responding"
         ((ERRORS++))
     fi
 fi
 
-# Verificar RabbitMQ Management UI
-print_info "Verificando RabbitMQ Management UI..."
+# Check RabbitMQ Management UI
+print_info "Checking RabbitMQ Management UI..."
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:15672/ 2>/dev/null || echo "000")
 if [ "$RESPONSE" = "200" ]; then
-    print_success "RabbitMQ Management UI está accesible en http://localhost:15672"
+    print_success "RabbitMQ Management UI is accessible at http://localhost:15672"
 else
-    print_warning "RabbitMQ Management UI no está respondiendo (esto es normal si aún está iniciando)"
+    print_warning "RabbitMQ Management UI is not responding (this is normal if still starting)"
 fi
 
-# Verificar conexiones entre servicios
-print_header "Verificando conectividad entre servicios"
+# Check connectivity between services
+print_header "Checking connectivity between services"
 
-# Verificar que los servicios pueden conectarse a PostgreSQL
-print_info "Verificando conexión de servicios a PostgreSQL..."
+# Check that services can connect to PostgreSQL
+print_info "Checking services connection to PostgreSQL..."
 SERVICES_WITH_DB=("users-service" "products-service" "orders-service")
 for service in "${SERVICES_WITH_DB[@]}"; do
-    # Intentar ejecutar un comando psql dentro del contenedor del servicio
-    # Esto verificará que el servicio puede resolver y conectarse a postgres
-    if docker-compose exec -T $service sh -c "command -v nc" &> /dev/null; then
-        if docker-compose exec -T $service nc -zv postgres 5432 &> /dev/null; then
-            print_success "$service puede conectarse a PostgreSQL"
+    # Try to execute a psql command inside the service container
+    # This will verify that the service can resolve and connect to postgres
+    if $COMPOSE_CMD exec -T $service sh -c "command -v nc" &> /dev/null; then
+        if $COMPOSE_CMD exec -T $service nc -zv postgres 5432 &> /dev/null; then
+            print_success "$service can connect to PostgreSQL"
         else
-            print_warning "$service puede tener problemas conectándose a PostgreSQL"
+            print_warning "$service may have problems connecting to PostgreSQL"
         fi
     else
-        print_info "$service: nc no disponible, saltando verificación de red"
+        print_info "$service: nc not available, skipping network check"
     fi
 done
 
-# Resumen final
-print_header "Resumen de validación"
+# Final summary
+print_header "Validation summary"
 
 if [ $ERRORS -eq 0 ]; then
-    print_success "Todos los servicios están funcionando correctamente"
+    print_success "All services are working correctly"
     echo ""
-    print_info "URLs de acceso:"
+    print_info "Access URLs:"
     echo "  - Users Service: http://localhost:3001"
     echo "  - Products Service: http://localhost:3002"
     echo "  - Orders Service: http://localhost:3003"
     echo "  - Notifications Service: http://localhost:3004"
     echo "  - RabbitMQ Management: http://localhost:15672 (admin/password)"
     echo ""
-    print_info "Puedes probar el flujo completo ejecutando:"
+    print_info "You can test the complete flow by running:"
     echo "  ./test-flow.sh"
     echo ""
     exit 0
 else
-    print_error "Se encontraron $ERRORS error(es)"
+    print_error "Found $ERRORS error(s)"
     echo ""
-    print_info "Comandos útiles para debug:"
-    echo "  - Ver estado de contenedores: docker-compose ps"
-    echo "  - Ver logs de todos los servicios: docker-compose logs"
-    echo "  - Ver logs de un servicio: docker-compose logs -f [nombre-servicio]"
-    echo "  - Reiniciar servicios: docker-compose restart"
+    print_info "Useful commands for debugging:"
+    echo "  - View container status:"
+    echo "      docker-compose ps"
+    echo "      podman-compose ps  (or podman compose ps)"
+    echo "  - View logs of all services:"
+    echo "      docker-compose logs"
+    echo "      podman-compose logs  (or podman compose logs)"
+    echo "  - View logs of a specific service:"
+    echo "      docker-compose logs -f [service-name]"
+    echo "      podman-compose logs -f [service-name]  (or podman compose logs -f [service-name])"
+    echo "  - Restart services:"
+    echo "      docker-compose restart"
+    echo "      podman-compose restart  (or podman compose restart)"
     echo ""
     exit 1
 fi
