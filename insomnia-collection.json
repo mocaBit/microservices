@@ -1,0 +1,320 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-10-25T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "req_register_user",
+      "parentId": "fld_users_service",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "url": "{{ _.base_url }}:3001/register",
+      "name": "Register User",
+      "description": "Register a new user in the system",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_content_type",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1698192000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_login_user",
+      "parentId": "fld_users_service",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "url": "{{ _.base_url }}:3001/login",
+      "name": "Login User",
+      "description": "Login user and get JWT token",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_content_type",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1698191900000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_profile",
+      "parentId": "fld_users_service",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "url": "{{ _.base_url }}:3001/profile",
+      "name": "Get User Profile",
+      "description": "Get user profile (requires JWT token)",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.jwt_token }}"
+      },
+      "metaSortKey": -1698191800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_list_products",
+      "parentId": "fld_products_service",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "url": "{{ _.base_url }}:3002/products",
+      "name": "List Products",
+      "description": "Get all products (with Redis cache)",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": -1698192000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_create_order",
+      "parentId": "fld_orders_service",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "url": "{{ _.base_url }}:3003/orders",
+      "name": "Create Order",
+      "description": "Create a new order (requires JWT token)",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"items\": [\n    {\n      \"productId\": 1,\n      \"quantity\": 2\n    },\n    {\n      \"productId\": 2,\n      \"quantity\": 1\n    }\n  ]\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_content_type",
+          "name": "Content-Type",
+          "value": "application/json",
+          "description": ""
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.jwt_token }}"
+      },
+      "metaSortKey": -1698192000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_order",
+      "parentId": "fld_orders_service",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "url": "{{ _.base_url }}:3003/orders/1",
+      "name": "Get Order by ID",
+      "description": "Get a specific order by ID",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.jwt_token }}"
+      },
+      "metaSortKey": -1698191900000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_user_orders",
+      "parentId": "fld_orders_service",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "url": "{{ _.base_url }}:3003/orders/user/1",
+      "name": "Get User Orders",
+      "description": "Get all orders for a specific user",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.jwt_token }}"
+      },
+      "metaSortKey": -1698191800000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_get_notifications",
+      "parentId": "fld_notifications_service",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "url": "{{ _.base_url }}:3004/notifications/1",
+      "name": "Get User Notifications (SSE)",
+      "description": "Get notifications for a user via Server-Sent Events",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "id": "pair_accept",
+          "name": "Accept",
+          "value": "text/event-stream",
+          "description": ""
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": -1698192000000,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_users_service",
+      "parentId": "wrk_ecommerce",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "name": "Users Service (Port 3001)",
+      "description": "Authentication and user management endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1698192000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_products_service",
+      "parentId": "wrk_ecommerce",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "name": "Products Service (Port 3002)",
+      "description": "Product catalog and inventory endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1698191000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_orders_service",
+      "parentId": "wrk_ecommerce",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "name": "Orders Service (Port 3003)",
+      "description": "Order management and processing endpoints",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1698190000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "fld_notifications_service",
+      "parentId": "wrk_ecommerce",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "name": "Notifications Service (Port 3004)",
+      "description": "Real-time notifications via Server-Sent Events",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": -1698189000000,
+      "_type": "request_group"
+    },
+    {
+      "_id": "wrk_ecommerce",
+      "parentId": null,
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "name": "E-commerce Microservices",
+      "description": "Collection for testing all microservices endpoints",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_base",
+      "parentId": "wrk_ecommerce",
+      "modified": 1698192000000,
+      "created": 1698192000000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost",
+        "jwt_token": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "jwt_token"
+        ]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1698192000000,
+      "_type": "environment"
+    }
+  ]
+}

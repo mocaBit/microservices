@@ -109,6 +109,10 @@ Once all services are running, they will be available at:
 - **Notifications Service**: http://localhost:3004
   - `GET /notifications/:userId` - Get notifications (SSE)
 
+**💡 Pro Tip**: For easier testing, import the `insomnia-collection.json` file into [Insomnia](https://insomnia.rest/) or your preferred REST client. The collection includes all these endpoints with examples, authentication, and proper request formatting.
+
+#### Management Interfaces:
+
 - **RabbitMQ Management UI**: http://localhost:15672
   - Username: `admin`
   - Password: `password`
@@ -250,6 +254,107 @@ This script will execute a complete flow:
 3. Query products
 4. Create an order
 5. Verify that the notification was received
+
+### Optional: Testing with REST Clients
+
+For manual testing and development, you can use REST clients like [Insomnia](https://insomnia.rest/).
+
+#### Sample API Requests
+
+**1. Register a new user:**
+```http
+POST http://localhost:3001/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+
+**2. Login:**
+```http
+POST http://localhost:3001/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+*Save the JWT token from the response for authenticated requests*
+
+**3. Get user profile:**
+```http
+GET http://localhost:3001/profile
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+```
+
+**4. List products:**
+```http
+GET http://localhost:3002/products
+```
+
+**5. Create an order:**
+```http
+POST http://localhost:3003/orders
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    }
+  ]
+}
+```
+
+**6. Get user notifications (Server-Sent Events):**
+```http
+GET http://localhost:3004/notifications/USER_ID
+Accept: text/event-stream
+```
+
+#### REST Client Setup Tips:
+
+1. **Environment Variables**: Set up environment variables in your REST client:
+   - `base_url`: `http://localhost`
+   - `jwt_token`: (update after login)
+
+2. **Collection Organization**: Group requests by service:
+   - Users Service (Port 3001)
+   - Products Service (Port 3002) 
+   - Orders Service (Port 3003)
+   - Notifications Service (Port 3004)
+
+3. **Authentication**: Use the JWT token from login response in subsequent requests
+
+#### Insomnia Collection (Optional)
+
+You can create an Insomnia collection with all these endpoints for easier testing. Import the requests above and organize them by service for better workflow.
+
+**Quick Import**: Use the pre-configured Insomnia collection included in this repository:
+
+1. **Download Insomnia**: [https://insomnia.rest/download](https://insomnia.rest/download)
+2. **Import Collection**: 
+   - Open Insomnia
+   - Click "Create" → "Import From" → "File"
+   - Select `insomnia-collection.json` from this repository
+3. **Set Environment Variables**:
+   - Go to "Manage Environments"
+   - Update `jwt_token` after logging in
+   - `base_url` is already set to `http://localhost`
+
+The collection includes:
+- **Users Service**: Register, Login, Get Profile
+- **Products Service**: List Products  
+- **Orders Service**: Create Order, Get Order, Get User Orders
+- **Notifications Service**: Get Notifications (SSE)
+- **Pre-configured authentication** with JWT Bearer tokens
+- **Environment variables** for easy endpoint management
 
 ### Troubleshooting
 
